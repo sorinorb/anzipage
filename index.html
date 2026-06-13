@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anzipad Keyboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #7c2d3a 0%, #b91c4a 50%, #e63946 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            padding: 15px;
+        }
+        
+        .container {
+            max-width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: calc(100vh - 30px);
+        }
+        
+        .header {
+            text-align: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 4px 15px rgba(185, 28, 74, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, #fff0f3, #ffc2d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .keyboard-section {
+            background: rgba(124, 45, 58, 0.4);
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            flex-shrink: 0;
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .keyboard-wrapper {
+            display: flex;
+            gap: 10px;
+            height: 200px;
+            margin-bottom: 10px;
+        }
+        
+        .keyboard-left-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 55px;
+        }
+        
+        .keyboard-container {
+            height: 200px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 8px;
+            background: rgba(185, 28, 74, 0.3);
+            border-radius: 8px;
+            flex: 1;
+        }
+        
+        .keyboard-container::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .keyboard-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        
+        .keyboard-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, #ffc2d1, #e63946);
+            border-radius: 3px;
+        }
+        
+        .keyboard-main {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 900px;
+            padding: 5px;
+        }
+        
+        .keyboard-row {
+            display: flex;
+            gap: 4px;
+            justify-content: flex-start;
+        }
+        
+        .key {
+            min-width: 45px;
+            height: 45px;
+            background: linear-gradient(145deg, rgba(255, 194, 209, 0.3), rgba(255, 194, 209, 0.15));
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+            color: #fff0f3;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0;
+        }
+        
+        .key:hover {
+            background: linear-gradient(145deg, rgba(255, 194, 209, 0.5), rgba(255, 194, 209, 0.3));
+            box-shadow: 0 2px 8px rgba(230, 57, 70, 0.3);
+        }
+        
+        .key:active, .key.active {
+            transform: scale(0.95);
+            background: linear-gradient(145deg, rgba(230, 57, 70, 0.6), rgba(230, 57, 70, 0.4));
+        }
+        
+        /* Tombol kontrol kiri vertikal (sama ukuran dengan tombol huruf) */
+        .key.control-left {
+            min-width: 45px;
+            height: 45px;
+            font-size: 12px;
+        }
+        
+        /* Kelompok Huruf OSK */
+        .key.oskm { 
+            background: linear-gradient(145deg, rgba(255, 194, 209, 0.4), rgba(255, 194, 209, 0.25));
+        }
+        
+        /* Kelompok Angka */
+        .key.number {
+            background: linear-gradient(145deg, rgba(230, 57, 70, 0.4), rgba(230, 57, 70, 0.25));
+        }
+        
+        /* Kelompok Simbol */
+        .key.symbol {
+            background: linear-gradient(145deg, rgba(214, 40, 57, 0.4), rgba(214, 40, 57, 0.25));
+        }
+        
+        .key.wide { min-width: 60px; }
+        .key.extra-wide { min-width: 75px; }
+        .key.double-wide { min-width: 90px; }
+        .key.triple-wide { min-width: 120px; }
+        
+        /* Warna khusus untuk tombol kontrol */
+        .key.control-left.delete { 
+            background: linear-gradient(145deg, rgba(185, 28, 74, 0.6), rgba(185, 28, 74, 0.4));
+        }
+        
+        .key.control-left.space { 
+            background: linear-gradient(145deg, rgba(255, 107, 129, 0.6), rgba(255, 107, 129, 0.4));
+        }
+        
+        .key.control-left.enter { 
+            background: linear-gradient(145deg, rgba(255, 194, 209, 0.6), rgba(255, 194, 209, 0.4));
+        }
+        
+        .key.control-left.shift { 
+            background: linear-gradient(145deg, rgba(214, 40, 57, 0.6), rgba(214, 40, 57, 0.4));
+        }
+        
+        .keyboard-scroll-wheel {
+            width: 100%;
+            height: 40px;
+            background: rgba(124, 45, 58, 0.5);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            user-select: none;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .scroll-wheel-track {
+            width: calc(100% - 60px);
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin: 0 10px;
+            position: relative;
+        }
+        
+        .scroll-wheel-thumb {
+            width: 50px;
+            height: 18px;
+            background: linear-gradient(90deg, #ffc2d1, #e63946);
+            border-radius: 9px;
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: grab;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(230, 57, 70, 0.5);
+        }
+        
+        .scroll-wheel-thumb:active {
+            cursor: grabbing;
+        }
+        
+        .scroll-left-btn, .scroll-right-btn {
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #fff0f3;
+        }
+        
+        .scroll-left-btn:hover, .scroll-right-btn:hover {
+            background: rgba(230, 57, 70, 0.5);
+        }
+        
+        .output-section {
+            background: rgba(124, 45, 58, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 350px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .output-header h2 {
+            font-size: 1.3rem;
+            color: #ffc2d1;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .header-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .header-btn-primary {
+            background: linear-gradient(135deg, #e63946, #d62839);
+            color: white;
+            box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
+        }
+        
+        .header-btn-secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .output-display {
+            background: rgba(185, 28, 74, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.6;
+            font-family: 'Consolas', 'Monaco', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin-bottom: 10px;
+            cursor: text;
+            position: relative;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .output-display .char {
+            display: inline;
+            position: relative;
+        }
+        
+        .output-display .char:hover {
+            background-color: rgba(255, 194, 209, 0.3);
+        }
+        
+        .cursor {
+            display: inline-block;
+            background-color: #ffc2d1;
+            width: 2px;
+            height: 20px;
+            vertical-align: middle;
+            animation: blink 1s infinite;
+            margin: 0 1px;
+            box-shadow: 0 0 8px rgba(255, 194, 209, 0.8);
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .output-stats {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            flex: 1;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffc2d1;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        @media (max-width: 768px) {
+            .keyboard-section { height: 250px; }
+            .keyboard-wrapper { height: 180px; }
+            .keyboard-left-controls { width: 50px; }
+            .keyboard-container { height: 180px; }
+            .keyboard-main { min-width: 700px; }
+            .key, .key.control-left { 
+                min-width: 40px; 
+                height: 40px; 
+                font-size: 11px; 
+            }
+            .key.wide { min-width: 55px; }
+            .key.extra-wide { min-width: 65px; }
+            .key.double-wide { min-width: 80px; }
+            .key.triple-wide { min-width: 110px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>⌨️ Anzipad Keyboard</h1>
+        </header>
+        
+        <div class="main-content">
+            <section class="keyboard-section">
+                <div class="keyboard-wrapper">
+                    <!-- Kolom kontrol vertikal di kiri - Delete, Space, Enter, Shift -->
+                    <div class="keyboard-left-controls">
+                        <div class="key control-left delete" data-action="backspace" title="Delete">⌫</div>
+                        <div class="key control-left space" data-action="space" title="Space">␣</div>
+                        <div class="key control-left enter" data-action="enter" title="Enter">↵</div>
+                        <div class="key control-left shift" data-action="shift" title="Shift">⇧</div>
+                    </div>
+                    
+                    <!-- Keyboard utama 4 baris dengan scroll horizontal -->
+                    <div class="keyboard-container" id="keyboardContainer">
+                        <div class="keyboard-main" id="keyboardMain">
+                            <!-- Baris 1: OSK Huruf dan Angka -->
+                            <div class="keyboard-row">
+                                <!-- OSK Huruf m-e-a-i-u-o-k-n -->
+                                <div class="key oskm" data-main="m" data-sub="M">m</div>
+                                <div class="key oskm" data-main="e" data-sub="E">e</div>
+                                <div class="key oskm" data-main="a" data-sub="A">a</div>
+                                <div class="key oskm" data-main="i" data-sub="I">i</div>
+                                <div class="key oskm" data-main="u" data-sub="U">u</div>
+                                <div class="key oskm" data-main="o" data-sub="O">o</div>
+                                <div class="key oskm" data-main="k" data-sub="K">k</div>
+                                <div class="key oskm" data-main="n" data-sub="N">n</div>
+                                
+                                <!-- Angka 1-0 -->
+                                <div class="key number" data-main="1" data-sub="!">1</div>
+                                <div class="key number" data-main="2" data-sub="@">2</div>
+                                <div class="key number" data-main="3" data-sub="#">3</div>
+                                <div class="key number" data-main="4" data-sub="$">4</div>
+                                <div class="key number" data-main="5" data-sub="%">5</div>
+                                <div class="key number" data-main="6" data-sub="^">6</div>
+                                <div class="key number" data-main="7" data-sub="&">7</div>
+                                <div class="key number" data-main="8" data-sub="*">8</div>
+                                <div class="key number" data-main="9" data-sub="(">9</div>
+                                <div class="key number" data-main="0" data-sub=")">0</div>
+                                
+                                <!-- Simbol -->
+                                <div class="key symbol" data-main="`" data-sub="~">`</div>
+                                <div class="key symbol" data-main="-" data-sub="_">-</div>
+                                <div class="key symbol" data-main="=" data-sub="+">=</div>
+                                
+                                <!-- Tombol fungsi -->
+                                <div class="key" data-main="esc">Esc</div>
+                                <div class="key" data-main="f1">F1</div>
+                                <div class="key" data-main="f2">F2</div>
+                            </div>
+                            
+                            <!-- Baris 2: Huruf Lainnya (susunan baru: d-h-l-g-r-s-t-y-w-j-f-q) -->
+                            <div class="keyboard-row">
+                                <!-- Huruf sesuai urutan baru: d-h-l-g-r-s-t-y-w-j-f-q -->
+                                <div class="key" data-main="d" data-sub="D">d</div>
+                                <div class="key" data-main="h" data-sub="H">h</div>
+                                <div class="key" data-main="l" data-sub="L">l</div>
+                                <div class="key" data-main="g" data-sub="G">g</div>
+                                <div class="key" data-main="r" data-sub="R">r</div>
+                                <div class="key" data-main="s" data-sub="S">s</div>
+                                <div class="key" data-main="t" data-sub="T">t</div>
+                                <div class="key" data-main="y" data-sub="Y">y</div>
+                                <div class="key" data-main="w" data-sub="W">w</div>
+                                <div class="key" data-main="j" data-sub="J">j</div>
+                                <div class="key" data-main="f" data-sub="F">f</div>
+                                <div class="key" data-main="q" data-sub="Q">q</div>
+                                
+                                <!-- Simbol -->
+                                <div class="key symbol" data-main="[" data-sub="{">[</div>
+                                <div class="key symbol" data-main="]" data-sub="}">]</div>
+                                <div class="key symbol" data-main="\\" data-sub="|">\</div>
+                                <div class="key symbol" data-main=";" data-sub=":">;</div>
+                                <div class="key symbol" data-main="'" data-sub='"'>'</div>
+                                
+                                <!-- Kontrol -->
+                                <div class="key caps wide" data-action="caps">Caps</div>
+                                <div class="key tab wide" data-action="tab">Tab</div>
+                                
+                                <!-- Tombol fungsi -->
+                                <div class="key" data-main="f3">F3</div>
+                                <div class="key" data-main="f4">F4</div>
+                            </div>
+                            
+                            <!-- Baris 3: Huruf Sisa (a-c-b-k-m-n-o-p-v-x-z setelah menghapus yang sudah ada) -->
+                            <div class="keyboard-row">
+                                <!-- Huruf sisa (semua huruf minus yang sudah ada di baris 1 & 2) -->
+                                <div class="key" data-main="a" data-sub="A">a</div>
+                                <div class="key" data-main="c" data-sub="C">c</div>
+                                <div class="key" data-main="b" data-sub="B">b</div>
+                                <div class="key" data-main="k" data-sub="K">k</div>
+                                <div class="key" data-main="m" data-sub="M">m</div>
+                                <div class="key" data-main="n" data-sub="N">n</div>
+                                <div class="key" data-main="o" data-sub="O">o</div>
+                                <div class="key" data-main="p" data-sub="P">p</div>
+                                <div class="key" data-main="v" data-sub="V">v</div>
+                                <div class="key" data-main="x" data-sub="X">x</div>
+                                <div class="key" data-main="z" data-sub="Z">z</div>
+                                
+                                <!-- Simbol sisanya -->
+                                <div class="key symbol" data-main="," data-sub="<">,</div>
+                                <div class="key symbol" data-main="." data-sub=">">.</div>
+                                <div class="key symbol" data-main="/" data-sub="?">/</div>
+                                
+                                <!-- Kontrol -->
+                                <div class="key ctrl" data-action="ctrl">Ctrl</div>
+                                <div class="key alt" data-action="alt">Alt</div>
+                                <div class="key win" data-action="win">Win</div>
+                                
+                                <!-- Navigasi -->
+                                <div class="key" data-action="arrow-left">←</div>
+                                <div class="key" data-action="arrow-up">↑</div>
+                                <div class="key" data-action="arrow-down">↓</div>
+                                <div class="key" data-action="arrow-right">→</div>
+                                
+                                <!-- Tombol fungsi -->
+                                <div class="key" data-main="f5">F5</div>
+                                <div class="key" data-main="f6">F6</div>
+                                <div class="key" data-main="f7">F7</div>
+                            </div>
+                            
+                            <!-- Baris 4: Tombol Fungsi dan Kontrol Tambahan -->
+                            <div class="keyboard-row">
+                                <!-- Tombol navigasi lainnya -->
+                                <div class="key" data-main="home">Home</div>
+                                <div class="key" data-main="end">End</div>
+                                <div class="key" data-main="ins">Ins</div>
+                                <div class="key" data-main="del">Del</div>
+                                <div class="key" data-main="pgup">PgUp</div>
+                                <div class="key" data-main="pgdn">PgDn</div>
+                                <div class="key" data-main="num">Num</div>
+                                
+                                <!-- Tombol fungsi sisanya -->
+                                <div class="key" data-main="f8">F8</div>
+                                <div class="key" data-main="f9">F9</div>
+                                <div class="key" data-main="f10">F10</div>
+                                <div class="key" data-main="f11">F11</div>
+                                <div class="key" data-main="f12">F12</div>
+                                <div class="key" data-main="print">PrtSc</div>
+                                
+                                <!-- Spasi untuk mengisi -->
+                                <div class="key" data-main="`" data-sub="~">`</div>
+                                <div class="key" data-main="-" data-sub="_">-</div>
+                                <div class="key" data-main="=" data-sub="+">=</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Scroll bar horizontal -->
+                <div class="keyboard-scroll-wheel" id="keyboardScrollWheel">
+                    <div class="scroll-left-btn" id="scrollLeftBtn">←</div>
+                    <div class="scroll-wheel-track">
+                        <div class="scroll-wheel-thumb" id="scrollWheelThumb"></div>
+                    </div>
+                    <div class="scroll-right-btn" id="scrollRightBtn">→</div>
+                </div>
+            </section>
+            
+            <section class="output-section">
+                <div class="output-header">
+                    <h2>📝 Output Teks</h2>
+                    <div class="header-buttons">
+                        <button class="header-btn header-btn-primary" id="copyBtn">📋 Salin</button>
+                        <button class="header-btn header-btn-secondary" id="clearBtn">🗑️ Hapus</button>
+                    </div>
+                </div>
+                
+                <div class="output-display" id="outputDisplay"></div>
+                
+                <div class="output-stats">
+                    <div class="stat-box">
+                        <span class="stat-value" id="charCount">0</span>
+                        <span class="stat-label">Karakter</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-value" id="wordCount">0</span>
+                        <span class="stat-label">Kata</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-value" id="lineCount">1</span>
+                        <span class="stat-label">Baris</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-value" id="cursorPos">0</span>
+                        <span class="stat-label">Posisi Kursor</span>
+                    </div>
+                </div>
+                
+                <div class="status-bar">
+                    <span id="statusMsg">✨ Klik di area teks untuk memindahkan kursor</span>
+                    <span id="timestamp">00:00:00</span>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        let text = '';
+        let cursorPos = 0;
+        let capsLock = false;
+        let shiftKey = false;
+        
+        const outputDisplay = document.getElementById('outputDisplay');
+        const charCount = document.getElementById('charCount');
+        const wordCount = document.getElementById('wordCount');
+        const lineCount = document.getElementById('lineCount');
+        const cursorPosDisplay = document.getElementById('cursorPos');
+        const statusMsg = document.getElementById('statusMsg');
+        const timestamp = document.getElementById('timestamp');
+        
+        function updateDisplay() {
+            outputDisplay.innerHTML = '';
+            
+            for (let i = 0; i < text.length; i++) {
+                const span = document.createElement('span');
+                span.className = 'char';
+                span.textContent = text[i];
+                span.dataset.index = i;
+                outputDisplay.appendChild(span);
+                
+                if (i === cursorPos - 1) {
+                    const cursor = document.createElement('span');
+                    cursor.className = 'cursor';
+                    outputDisplay.appendChild(cursor);
+                }
+            }
+            
+            if (cursorPos === text.length || text.length === 0) {
+                const cursor = document.createElement('span');
+                cursor.className = 'cursor';
+                outputDisplay.appendChild(cursor);
+            }
+            
+            updateStats();
+        }
+        
+        function updateStats() {
+            charCount.textContent = text.length;
+            wordCount.textContent = text.trim() ? text.trim().split(/\s+/).length : 0;
+            lineCount.textContent = text.split('\n').length;
+            cursorPosDisplay.textContent = cursorPos;
+        }
+        
+        function insertChar(char) {
+            text = text.slice(0, cursorPos) + char + text.slice(cursorPos);
+            cursorPos++;
+            updateDisplay();
+        }
+        
+        function deleteChar() {
+            if (cursorPos > 0) {
+                text = text.slice(0, cursorPos - 1) + text.slice(cursorPos);
+                cursorPos--;
+                updateDisplay();
+            }
+        }
+        
+        function moveCursor(direction) {
+            if (direction === 'left' && cursorPos > 0) cursorPos--;
+            else if (direction === 'right' && cursorPos < text.length) cursorPos++;
+            else if (direction === 'up') {
+                const linesBefore = text.substr(0, cursorPos).split('\n');
+                if (linesBefore.length > 1) {
+                    const currentLine = linesBefore[linesBefore.length - 1];
+                    const prevLine = linesBefore[linesBefore.length - 2];
+                    const newPos = cursorPos - currentLine.length - 1;
+                    const targetPos = Math.min(newPos + Math.min(currentLine.length, prevLine.length), newPos + prevLine.length);
+                    cursorPos = Math.max(newPos, targetPos);
+                }
+            } else if (direction === 'down') {
+                const linesBefore = text.substr(0, cursorPos).split('\n');
+                const currentLineIndex = linesBefore.length - 1;
+                const allLines = text.split('\n');
+                
+                if (currentLineIndex < allLines.length - 1) {
+                    const currentLine = linesBefore[currentLineIndex];
+                    const nextLine = allLines[currentLineIndex + 1];
+                    const newPos = cursorPos + nextLine.length + 1;
+                    const targetPos = cursorPos + Math.min(currentLine.length, nextLine.length);
+                    cursorPos = Math.min(newPos - 1, targetPos);
+                }
+            } else if (direction === 'home') cursorPos = 0;
+            else if (direction === 'end') cursorPos = text.length;
+            updateDisplay();
+        }
+        
+        // Klik pada teks untuk memindahkan kursor
+        outputDisplay.addEventListener('click', (e) => {
+            if (e.target.classList.contains('char')) {
+                const index = parseInt(e.target.dataset.index);
+                const rect = e.target.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                
+                if (clickX > rect.width / 2) {
+                    cursorPos = index + 1;
+                } else {
+                    cursorPos = index;
+                }
+            } else {
+                cursorPos = text.length;
+            }
+            updateDisplay();
+            statusMsg.textContent = `✅ Kursor dipindahkan ke posisi ${cursorPos}`;
+        });
+        
+        // Keyboard events
+        document.querySelectorAll('.key').forEach(key => {
+            key.addEventListener('click', function() {
+                const main = this.dataset.main;
+                const sub = this.dataset.sub;
+                const action = this.dataset.action;
+                
+                this.classList.add('active');
+                setTimeout(() => this.classList.remove('active'), 150);
+                
+                if (action) {
+                    switch(action) {
+                        case 'backspace': deleteChar(); break;
+                        case 'enter': insertChar('\n'); break;
+                        case 'space': insertChar(' '); break;
+                        case 'tab': insertChar('    '); break;
+                        case 'caps': 
+                            capsLock = !capsLock; 
+                            statusMsg.textContent = capsLock ? '✅ Caps Lock AKTIF' : '✅ Caps Lock nonaktif';
+                            break;
+                        case 'shift': 
+                            shiftKey = !shiftKey; 
+                            setTimeout(() => shiftKey = false, 1000);
+                            statusMsg.textContent = shiftKey ? '✅ Shift AKTIF' : '✅ Shift nonaktif';
+                            break;
+                        case 'arrow-left': moveCursor('left'); break;
+                        case 'arrow-right': moveCursor('right'); break;
+                        case 'arrow-up': moveCursor('up'); break;
+                        case 'arrow-down': moveCursor('down'); break;
+                        case 'ctrl': 
+                        case 'alt': 
+                        case 'win': 
+                            statusMsg.textContent = `Tombol ${this.textContent} ditekan`;
+                            break;
+                    }
+                } else if (main) {
+                    let char = main;
+                    if (shiftKey && sub) char = sub;
+                    else if ((capsLock || shiftKey) && /^[a-z]$/.test(char)) char = char.toUpperCase();
+                    
+                    // Handle tombol fungsi khusus
+                    const specialKeys = ['esc', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 
+                                       'print', 'home', 'end', 'ins', 'del', 'pgup', 'pgdn', 'num'];
+                    
+                    if (specialKeys.includes(main)) {
+                        statusMsg.textContent = `Tombol ${main.toUpperCase()} ditekan`;
+                    } else {
+                        insertChar(char);
+                    }
+                }
+            });
+        });
+        
+        // Scroll wheel horizontal
+        const keyboardContainer = document.getElementById('keyboardContainer');
+        const scrollThumb = document.getElementById('scrollWheelThumb');
+        const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+        const scrollRightBtn = document.getElementById('scrollRightBtn');
+        
+        let isDragging = false;
+        let startX = 0;
+        let startLeft = 0;
+        
+        function updateScrollThumb() {
+            const trackWidth = scrollThumb.parentElement.offsetWidth;
+            const thumbWidth = 50;
+            const maxScroll = keyboardContainer.scrollWidth - keyboardContainer.clientWidth;
+            
+            if (maxScroll > 0) {
+                const scrollRatio = keyboardContainer.scrollLeft / maxScroll;
+                scrollThumb.style.left = (scrollRatio * (trackWidth - thumbWidth)) + 'px';
+            } else {
+                scrollThumb.style.left = '0px';
+            }
+        }
+        
+        scrollThumb.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startLeft = parseInt(scrollThumb.style.left) || 0;
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - startX;
+            const trackWidth = scrollThumb.parentElement.offsetWidth;
+            const thumbWidth = 50;
+            const maxScroll = keyboardContainer.scrollWidth - keyboardContainer.clientWidth;
+            
+            let newLeft = startLeft + deltaX;
+            newLeft = Math.max(0, Math.min(newLeft, trackWidth - thumbWidth));
+            scrollThumb.style.left = newLeft + 'px';
+            
+            const scrollRatio = newLeft / (trackWidth - thumbWidth);
+            keyboardContainer.scrollLeft = scrollRatio * maxScroll;
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        scrollLeftBtn.addEventListener('click', () => {
+            keyboardContainer.scrollLeft = Math.max(0, keyboardContainer.scrollLeft - 200);
+            updateScrollThumb();
+        });
+        
+        scrollRightBtn.addEventListener('click', () => {
+            const maxScroll = keyboardContainer.scrollWidth - keyboardContainer.clientWidth;
+            keyboardContainer.scrollLeft = Math.min(maxScroll, keyboardContainer.scrollLeft + 200);
+            updateScrollThumb();
+        });
+        
+        keyboardContainer.addEventListener('scroll', updateScrollThumb);
+        
+        // Copy & Clear buttons
+        document.getElementById('copyBtn').addEventListener('click', async () => {
+            if (text) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    statusMsg.textContent = '✅ Teks berhasil disalin!';
+                } catch {
+                    statusMsg.textContent = '❌ Gagal menyalin teks';
+                }
+            } else {
+                statusMsg.textContent = '⚠️ Tidak ada teks untuk disalin';
+            }
+        });
+        
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            if (text && confirm('Hapus semua teks?')) {
+                text = '';
+                cursorPos = 0;
+                updateDisplay();
+                statusMsg.textContent = '✅ Teks telah dihapus';
+            }
+        });
+        
+        // Physical keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            e.preventDefault();
+            
+            if (e.key === 'Backspace') deleteChar();
+            else if (e.key === 'Enter') insertChar('\n');
+            else if (e.key === 'Tab') insertChar('    ');
+            else if (e.key === 'ArrowLeft') moveCursor('left');
+            else if (e.key === 'ArrowRight') moveCursor('right');
+            else if (e.key === 'ArrowUp') moveCursor('up');
+            else if (e.key === 'ArrowDown') moveCursor('down');
+            else if (e.key === 'Home') moveCursor('home');
+            else if (e.key === 'End') moveCursor('end');
+            else if (e.key.length === 1) insertChar(e.key);
+        });
+        
+        // Clock
+        setInterval(() => {
+            const now = new Date();
+            timestamp.textContent = now.toLocaleTimeString('id-ID');
+        }, 1000);
+        
+        // Initialize
+        updateDisplay();
+        updateScrollThumb();
+    </script>
+</body>
+</html>
