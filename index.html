@@ -259,34 +259,61 @@
     <script>
         const SUPABASE_URL = 'https://gwhsowvtjlzmtqfthyzk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3aHNvd3Z0amx6bXRxZnRoeXprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjkyMDMsImV4cCI6MjEwMjcwNTIwM30.9ahPyuKoS7P-E0qCXORqdOl9zvownrqiYhnAPt_6I9o';
+        const DEFAULT_FALLBACK = 'https://sorin.my.id';
+        const TIMEOUT_MS = 8000;
 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Batasi waktu tunggu agar tidak menggantung selamanya
+        function withTimeout(promise, ms = TIMEOUT_MS) {
+            return Promise.race([
+                Promise.resolve(promise),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: server tidak merespons')), ms))
+            ]);
+        }
+
+        // Tampilkan pesan error + tombol coba lagi (bukan spinner tanpa akhir)
+        function tampilkanError(pesan) {
+            const screen = document.getElementById('loading-screen');
+            screen.innerHTML = `
+                <div class="text-center px-6">
+                    <p class="text-red-400 font-semibold mb-2">Gagal memverifikasi akses</p>
+                    <p class="text-neutral-400 text-sm mb-6 break-words">${String(pesan).replace(/</g, '&lt;')}</p>
+                    <button onclick="location.reload()" class="bg-cyan-700 hover:bg-cyan-600 text-white px-6 py-2 rounded font-semibold">Coba Lagi</button>
+                    <a href="${DEFAULT_FALLBACK}" class="block mt-4 text-cyan-400 text-sm underline">Ke halaman utama</a>
+                </div>`;
+        }
 
         async function jalankanProteksi() {
             const loadingText = document.getElementById('loading-text');
-            let idHalaman = window.location.hostname + window.location.pathname;
-            if (idHalaman.endsWith('/')) {
-                idHalaman = idHalaman.slice(0, -1);
-            }
 
             try {
-                // 1. Ambil Link Default Redirect dari Admin
-                const { data: globalData } = await supabase
-                    .from('app_settings')
-                    .select('url_unduh')
-                    .eq('nama_halaman', 'GLOBAL_DEFAULT')
-                    .maybeSingle();
+                // Pastikan SDK Supabase benar-benar termuat
+                if (!window.supabase || !window.supabase.createClient) {
+                    throw new Error('SDK Supabase gagal dimuat (cek koneksi internet / CDN diblokir)');
+                }
+                // Nama variabel diganti agar tidak bentrok dengan window.supabase
+                const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-                const globalRedirectUrl = (globalData && globalData.url_unduh) ? globalData.url_unduh : 'https://sorin.my.id';
+                let idHalaman = window.location.hostname + window.location.pathname;
+                // Hapus "/" di akhir dan "/index.html" agar cocok dengan path di admin
+                idHalaman = idHalaman.replace(/\/index\.html$/i, '');
+                if (idHalaman.endsWith('/')) idHalaman = idHalaman.slice(0, -1);
 
-                // 2. Cek Aturan Halaman Ini di Database
-                const { data: settingData, error: settingError } = await supabase
-                    .from('app_settings')
-                    .select('*')
-                    .eq('nama_halaman', idHalaman)
-                    .single();
+                // 1. Link default dari admin
+                const { data: globalData, error: globalError } = await withTimeout(
+                    sbClient.from('app_settings').select('url_unduh').eq('nama_halaman', 'GLOBAL_DEFAULT').maybeSingle()
+                );
+                if (globalError) throw new Error(globalError.message);
+                const globalRedirectUrl = (globalData && globalData.url_unduh) ? globalData.url_unduh : DEFAULT_FALLBACK;
 
-                if (settingError || !settingData) {
+                // 2. Aturan halaman ini
+                const { data: settingData, error: settingError } = await withTimeout(
+                    sbClient.from('app_settings').select('*').eq('nama_halaman', idHalaman).maybeSingle()
+                );
+                if (settingError) throw new Error(settingError.message);
+
+                // Halaman belum didaftarkan di admin -> alihkan ke default
+                if (!settingData) {
+                    loadingText.innerText = 'Mengalihkan...';
                     window.location.replace(globalRedirectUrl);
                     return;
                 }
@@ -294,31 +321,35 @@
                 const batasMaksimal = settingData.batas_pengunjung;
                 const targetRedirect = settingData.url_unduh || globalRedirectUrl;
 
-                // 3. Hitung Total Pengunjung
-                const { count } = await supabase
-                    .from('visitor_logs')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('nama_halaman', idHalaman);
+                // 3. Hitung pengunjung
+                const { count, error: countError } = await withTimeout(
+                    sbClient.from('visitor_logs').select('id', { count: 'exact', head: true }).eq('nama_halaman', idHalaman)
+                );
+                if (countError) throw new Error(countError.message);
 
-                // 4. Evaluasi Kuota
+                // 4. Evaluasi kuota
                 if (count !== null && count >= batasMaksimal) {
-                    loadingText.innerText = "Mengalihkan...";
-                    window.location.replace(targetRedirect); 
-                } else {
-                    await supabase.from('visitor_logs').insert([{ nama_halaman: idHalaman }]);
-
-                    // Tampilkan Aplikasi & Sembunyikan Loading
-                    document.getElementById('loading-screen').style.display = 'none';
-                    document.getElementById('main-content').style.display = 'block';
+                    loadingText.innerText = 'Mengalihkan...';
+                    window.location.replace(targetRedirect);
+                    return;
                 }
+
+                // Tampilkan aplikasi dulu, catat kunjungan di belakang layar
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+
+                withTimeout(sbClient.from('visitor_logs').insert([{ nama_halaman: idHalaman }]))
+                    .then(({ error }) => { if (error) console.error('Gagal mencatat kunjungan:', error.message); })
+                    .catch(err => console.error('Gagal mencatat kunjungan:', err.message));
+
             } catch (error) {
-                console.error("Gagal eksekusi blok proteksi:", error);
-                // SAFEGUARD: Jika koneksi gagal total/error, jangan biarkan stuck di loading, tapi lempar ke default
-                window.location.replace('https://sorin.my.id');
+                console.error('Gagal eksekusi blok proteksi:', error);
+                tampilkanError(error.message || error);
             }
         }
 
         jalankanProteksi();
+
 
         // LOGIKA ANZIPAD KEYBOARD
         let text = '';
